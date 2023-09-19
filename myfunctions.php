@@ -76,13 +76,13 @@ function sendSignupEmail($signUpEmailId, $SignUpLastName, $SignUpFirstName) {
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
 
-    $mail->Username = 'email@mail.com'; // Your gmail
+    $mail->Username = 'mail@email.com'; // Your gmail
     $mail->Password = 'password'; // Your gmail app password
 
     $mail->SMTPSecure = 'ssl';
     $mail->Port = 465;
 
-    $mail->setFrom('email@mail.com'); // Your gmail
+    $mail->setFrom('mail@email.com'); // Your gmail
 
     $mail->addAddress($signUpEmailId);
     $mail->isHTML (true);
@@ -118,13 +118,13 @@ function sendForgotPasswordEmail($userEmail, $emailSubject, $emailMessage) {
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
 
-    $mail->Username = 'email@mail.com'; // Your gmail
+    $mail->Username = 'mail@email.com'; // Your gmail
     $mail->Password = 'password'; // Your gmail app password
 
     $mail->SMTPSecure = 'ssl';
     $mail->Port = 465;
 
-    $mail->setFrom('email@mail.com'); // Your gmail
+    $mail->setFrom('mail@email.com'); // Your gmail
 
     $mail->addAddress($userEmail);
     $mail->isHTML (true);
