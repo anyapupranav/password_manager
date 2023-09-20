@@ -20,6 +20,7 @@ error_reporting(E_ERROR | E_PARSE);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Include Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <title>Add Password</title>
 
 </head>
@@ -56,7 +57,7 @@ $(document).ready(function(){
 </script>
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="index.html">Password Manager</a>
+        <a class="navbar-brand" href="index.html"><i style="font-size:24px" class="fa">&#xf023;</i> Password Manager</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -101,7 +102,7 @@ $(document).ready(function(){
                         include 'sql_conn.php';
                         // SQL query to fetch group options from your database
                         $passeduseridSqltofetch = $_SESSION['passed_user_email'];
-                        $sql = "SELECT distinct GroupName FROM vault WHERE UserEmailId = '$passeduseridSqltofetch' ";
+                        $sql = "SELECT distinct GroupName FROM vault WHERE UserEmailId = '$passeduseridSqltofetch' and DeleteFlag = 0 ";
                         $result = $conn->query($sql);
                         if ($result->num_rows > 0) {
                             // Fetch and store the group options
@@ -209,7 +210,19 @@ include 'myfunctions.php';
                 <p> Password Manager </p>
             </div>
             <div class="col-md-6">
-            <p> v1.0 </p>
+            <p>
+                <?php
+                    $sqlversion = "SELECT AppVersion FROM version ORDER BY AppVersion DESC LIMIT 1";
+                    $resultversion = $conn->query($sqlversion);
+
+                    if ($resultversion->num_rows > 0) {
+                        while ($row = $resultversion->fetch_assoc()) {
+                            $AppVersion = $row['AppVersion'];
+                        }
+                    }
+                    echo $AppVersion;
+                ?>
+            </p>
             </div>
         </div>
     </div>
