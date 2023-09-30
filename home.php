@@ -18,7 +18,6 @@ if ($_SESSION['passed_user_email'] === NULL) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Password Manager - Home</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 
 <style>
@@ -30,7 +29,7 @@ if ($_SESSION['passed_user_email'] === NULL) {
 <body>
 
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="index.html"><i style="font-size:24px" class="fa">&#xf023;</i> Password Manager</a>
+        <a class="navbar-brand" href="index.html">Password Manager</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
             aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
@@ -86,7 +85,7 @@ if ($_SESSION['passed_user_email'] === NULL) {
                         <th>Group</th>
                         <th>App</th>
                         <th>User</th>
-                        <th style='text-align: center'>Actions</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -113,8 +112,7 @@ if ($_SESSION['passed_user_email'] === NULL) {
                             echo "<td>" . $row['GroupName'] . "</td>";
                             echo "<td>" . $row['AppName'] . "</td>";
                             echo "<td>" . $row['UserName'] . "</td>";
-                            echo "<td style='text-align: center'> <a href='view_password.php?id=" . $row['UniqueId'] . "' class='btn btn-white border border-dark'>View</a>";
-                            echo "&nbsp; <a href='edit_password.php?id=" . $row['UniqueId'] . "' class='btn btn-primary'>Edit</a>";
+                            echo "<td><a href='edit_password.php?id=" . $row['UniqueId'] . "' class='btn btn-primary'>Edit</a>";
                             echo "&nbsp; <a href='delete_password.php?id=" . $row['UniqueId'] . "' class='btn btn-danger'>Delete</a></td>";
                             echo "</tr>";
                         }
@@ -127,33 +125,6 @@ if ($_SESSION['passed_user_email'] === NULL) {
             </table>
         </form>
     </div>
-
-<hr>
-
-<footer>
-    <div class="container">
-        <div class="row">
-            <div class="col-md-6">
-                <p> Password Manager </p>
-            </div>
-            <div class="col-md-6">
-            <p>
-                <?php
-                    $sqlversion = "SELECT AppVersion FROM version ORDER BY AppVersion DESC LIMIT 1";
-                    $resultversion = $conn->query($sqlversion);
-
-                    if ($resultversion->num_rows > 0) {
-                        while ($row = $resultversion->fetch_assoc()) {
-                            $AppVersion = $row['AppVersion'];
-                        }
-                    }
-                    echo $AppVersion;
-                ?>
-            </p>
-            </div>
-        </div>
-    </div>
-</footer>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
