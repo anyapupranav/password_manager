@@ -17,7 +17,9 @@ error_reporting(E_ERROR | E_PARSE);
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Shared | Password Manager</title>
+    <link rel = "icon" href = "img/titleicon.png" type = "image/x-icon">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <style>
     .navbar-nav {
@@ -26,13 +28,7 @@ error_reporting(E_ERROR | E_PARSE);
 </style>
 <body>
 
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="index.html">Password Manager</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
+<?php include 'themenav0.php'; ?>
 
                 <?php
                   // Check if the user is logged in
@@ -59,24 +55,14 @@ error_reporting(E_ERROR | E_PARSE);
                     ';
                   }
                 ?>
-            </ul>
-        </div>
-    </nav>
 
-
+<?php include 'themenav1.php'; ?>
 
     <div class="container-fluid">
         <table class="table table-striped">
             <thead>
-                <tr>
-                    <th colspan="5"> <h2>Shared with Me</h2> </th>
-                </tr>
-                <tr style="background-color: rgb(60, 210, 255);">
-                    <th>Group</th>
-                    <th>App</th>
-                    <th>User</th>
-                    <th>Actions</th>
-                </tr>
+                <h2>Shared with Me</h2>
+                <hr style="background-color:gray">
             </thead>
             <tbody>
                 <!-- table body -->
@@ -89,6 +75,14 @@ error_reporting(E_ERROR | E_PARSE);
                 $result = $conn->query($sql);
 
                 if ($result->num_rows > 0) {
+
+                    echo "<tr style='background-color: rgb(60, 210, 255);'> ";
+                    echo "<th>Group</th> ";
+                    echo "<th>App</th> ";
+                    echo "<th>User</th> ";
+                    echo "<th>Actions</th> ";
+                    echo "</tr> ";
+
                     while($row = $result->fetch_assoc()){
                         $vaultfetcheduniqueid = $row['sharedaccountuniqueid'];
                         
@@ -98,7 +92,7 @@ error_reporting(E_ERROR | E_PARSE);
                         if ($sqlvaultresult->num_rows > 0) {
                             while($sqlvaultrow = $sqlvaultresult->fetch_assoc()){
 
-                            echo "<tr>";
+                            echo "<tr style='background-color: #D6EEEE;'>";
                             echo "<td>" . $sqlvaultrow['GroupName'] . "</td>";
                             echo "<td>" . $sqlvaultrow['AppName'] . "</td>";
                             echo "<td>" . $sqlvaultrow['UserName'] . "</td>";
@@ -108,7 +102,7 @@ error_reporting(E_ERROR | E_PARSE);
                         }
                     }
                 } else {
-                    echo "<tr><td colspan='5'>No Accounts found.</td></tr>";
+                    echo "<tr><td colspan='5'> <div class='alert alert-danger alert-dismissible' role='alert'> No Accounts found. </div> </td></tr>";
                 }
 
                 ?>
@@ -118,16 +112,8 @@ error_reporting(E_ERROR | E_PARSE);
 
         <table class="table table-striped">
             <thead>
-                <tr>
-                    <th colspan="6"> <h2>Shared with Others</h2> </th>
-                </tr>
-                <tr style="background-color: rgb(60, 210, 255);">
-                    <th>Group</th>
-                    <th>App</th>
-                    <th>User</th>
-                    <th>Shared with</th>
-                    <th>Actions</th>
-                </tr>
+                <h2>Shared with Others</h2> 
+                <hr style="background-color:gray">
             </thead>
             <tbody>
                 <!-- table body -->
@@ -140,6 +126,15 @@ error_reporting(E_ERROR | E_PARSE);
                 $result1 = $conn->query($sql1);
 
                 if ($result1->num_rows > 0) {
+
+                    echo "<tr style='background-color: rgb(60, 210, 255);'> ";
+                    echo "<th>Group</th> ";
+                    echo "<th>App</th> ";
+                    echo "<th>User</th> ";
+                    echo "<th>Shared with</th> ";
+                    echo "<th>Actions</th> ";
+                    echo "</tr> ";
+
                     while($roww = $result1->fetch_assoc()){
                         $vaultfetcheduniqueid = $roww['sharedaccountuniqueid'];
                         
@@ -149,23 +144,50 @@ error_reporting(E_ERROR | E_PARSE);
                         if ($sqlvaultresult1->num_rows > 0) {
                             while($sqlvaultroww = $sqlvaultresult1->fetch_assoc()){
 
-                            echo "<tr>";
+                            echo "<tr style='background-color: #D6EEEE;'>";
                             echo "<td>" . $sqlvaultroww['GroupName'] . "</td>";
                             echo "<td>" . $sqlvaultroww['AppName'] . "</td>";
                             echo "<td>" . $sqlvaultroww['UserName'] . "</td>";
                             echo "<td>" . $roww['tosharedemailid'] . "</td>";
-                            echo "<td> <a href='delete_share.php?id=" . $sqlvaultroww['UniqueId'] . $roww['tosharedemailid'] . "' class='btn btn-danger'>Remove</a> </td>";
+                            echo "<td> <a href='delete_share.php?id=" . $sqlvaultroww['UniqueId'] . $roww['tosharedemailid'] . "' class='btn btn-danger'>Unshare</a> </td>";
                             echo "</tr>";
                             }
                         }
                     }
                 } else {
-                    echo "<tr><td colspan='6'>No Accounts found.</td></tr>";
+                    echo "<tr><td colspan='6'> <div class='alert alert-danger alert-dismissible' role='alert'> No Accounts found. </div> </td></tr>";
                 }
 
                 ?>
             </tbody>
         </table>
+
+        <hr>
+
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6">
+                <p> Password Manager </p>
+            </div>
+            <div class="col-md-6">
+            <p>
+                <?php
+                    $sqlversion = "SELECT AppVersion FROM version ORDER BY AppVersion DESC LIMIT 1";
+                    $resultversion = $conn->query($sqlversion);
+
+                    if ($resultversion->num_rows > 0) {
+                        while ($row = $resultversion->fetch_assoc()) {
+                            $AppVersion = $row['AppVersion'];
+                        }
+                    }
+                    echo $AppVersion;
+                ?>
+            </p>
+            </div>
+        </div>
+    </div>
+</footer>
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>

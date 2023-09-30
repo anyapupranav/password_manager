@@ -29,9 +29,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($updateStmt->execute()) {
             // Send a password reset email with a link containing the resetToken
-            $resetLink = "web-a.safesearch.co.in/password_manager/reset_password.php?token=" . $resetToken;
+            $resetLink = "web.networkpranav.in/password_manager/reset_password.php?token=" . $resetToken;
             $emailSubject = "Password Reset Request";
             $emailMessage = "To reset your password, click the following link:\n\n" . $resetLink;
+
+            // Send the email (you need to implement email sending logic)
+            // Example: mail($userEmail, $emailSubject, $emailMessage);
 
             //send mail
             include 'myfunctions.php';
@@ -59,11 +62,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Forgot Password | Password Manager</title>
+    <link rel = "icon" href = "img/titleicon.png" type = "image/x-icon">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
+<style>
+    .navbar-nav {
+        margin-left: auto;
+    }
+            /* Styles for the overlay */
+            .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            z-index: 1000; /* Make sure it's above other content */
+        }
+
+        /* Styles for the spinner */
+        .spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001; /* Make sure it's above the overlay */
+        }
+</style>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="index.html">Password Manager</a>
+        <a class="navbar-brand" href="index.html"><i style="font-size:24px" class="fa">&#xf023;</i> Password Manager</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -102,6 +133,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         </div>
     </div>
+
+    <!-- Overlay and spinner elements -->
+    <div class="overlay" id="overlay"></div>
+    <div class="spinner" id="spinner">
+        <!-- You can use an actual spinner image or icon here -->
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <script>
+        // Function to show the overlay and spinner
+        function showSpinner() {
+            document.getElementById("overlay").style.display = "block";
+            document.getElementById("spinner").style.display = "block";
+        }
+
+        // Function to hide the overlay and spinner
+        function hideSpinner() {
+            document.getElementById("overlay").style.display = "none";
+            document.getElementById("spinner").style.display = "none";
+        }
+
+        // Attach an event listener to the form submission
+        document.querySelector("form").addEventListener("submit", function () {
+            showSpinner(); // Show the spinner when the form is submitted
+        });
+    </script>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

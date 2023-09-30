@@ -3,11 +3,8 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-
 // Encryption function
-function encryptString($inputString) {
-
-    $encryptionKey = "YourEncryptionKey";
+function encryptString($inputString, $encryptionKey) {
 
     // Check if the input string is within the specified length limit
     if (strlen($inputString) > 255) {
@@ -28,9 +25,7 @@ function encryptString($inputString) {
 }
 
 // Decryption function
-function decryptString($encryptedString) {
-
-    $encryptionKey = "YourEncryptionKey";
+function decryptString($encryptedString, $encryptionKey) {
 
     // Decode the base64 encoded input
     $encryptedData = base64_decode($encryptedString);
@@ -72,23 +67,35 @@ function sendSignupEmail($signUpEmailId, $SignUpLastName, $SignUpFirstName) {
 
     $mail = new PHPMailer (true);
 
+    $sqlmailslug = "SELECT * FROM mailslug where DeleteFlag = 0 ORDER BY Sno DESC LIMIT 1";
+    $resultmailslug = $conn->query($sqlmailslug);
+
+    if ($resultmailslug->num_rows > 0) {
+        while ($rowmailslug = $resultmailslug->fetch_assoc()) {
+            $FetchedMailId = $rowmailslug['EmailId'];
+            $FetchedMailAppPassword = $rowmailslug['EmailAppPassword'];
+        }
+    }
+
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
 
-    $mail->Username = 'email@mail.com'; // Your gmail
-    $mail->Password = 'password'; // Your gmail app password
+    $mail->Username = $FetchedMailId; // Your gmail
+    $mail->Password = $FetchedMailAppPassword; // Your gmail app password
 
     $mail->SMTPSecure = 'ssl';
     $mail->Port = 465;
 
-    $mail->setFrom('email@mail.com'); // Your gmail
+    $mail->setFrom($FetchedMailId); // Your gmail
 
     $mail->addAddress($signUpEmailId);
     $mail->isHTML (true);
     $mail->Subject = $strsubject;
     $mail->Body =  $strmessage1 . $SignUpFirstName .'</li> <li><b>Last Name:</b> '. $SignUpLastName .'</li><li><b>Email:</b> '. $signUpEmailId . $strmessage2;
     $mail->send();
+
+    $conn->close();
 }
 
 // send email when forgot password is initiated
@@ -101,6 +108,7 @@ function sendForgotPasswordEmail($userEmail, $emailSubject, $emailMessage) {
 
     if ($resultForgotPassword->num_rows > 0) {
         while($row = $resultForgotPassword->fetch_assoc()){
+            $strsubject = $row['Subject'];
             $strmessagebody1 = $row['Body1'];
             $strmessagebody2 = $row['Body2'];
         }
@@ -114,17 +122,27 @@ function sendForgotPasswordEmail($userEmail, $emailSubject, $emailMessage) {
 
     $mail = new PHPMailer (true);
 
+    $sqlmailslug = "SELECT * FROM mailslug where DeleteFlag = 0 ORDER BY Sno DESC LIMIT 1";
+    $resultmailslug = $conn->query($sqlmailslug);
+
+    if ($resultmailslug->num_rows > 0) {
+        while ($rowmailslug = $resultmailslug->fetch_assoc()) {
+            $FetchedMailId = $rowmailslug['EmailId'];
+            $FetchedMailAppPassword = $rowmailslug['EmailAppPassword'];
+        }
+    }
+
     $mail->isSMTP();
     $mail->Host = 'smtp.gmail.com';
     $mail->SMTPAuth = true;
 
-    $mail->Username = 'email@mail.com'; // Your gmail
-    $mail->Password = 'password'; // Your gmail app password
+    $mail->Username = $FetchedMailId; // Your gmail
+    $mail->Password = $FetchedMailAppPassword; // Your gmail app password
 
     $mail->SMTPSecure = 'ssl';
     $mail->Port = 465;
 
-    $mail->setFrom('email@mail.com'); // Your gmail
+    $mail->setFrom($FetchedMailId); // Your gmail
 
     $mail->addAddress($userEmail);
     $mail->isHTML (true);
@@ -132,5 +150,44 @@ function sendForgotPasswordEmail($userEmail, $emailSubject, $emailMessage) {
     $mail->Body =  $strmessagebody1 .''. $emailMessage .''. $strmessagebody2;
     $mail->send();
 
+    $conn->close();
+
 }
+
+// Generate new encryption key for registerd new users
+ function generateEncryptionkey() {
+    $count = 0;
+    $characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#%&*-_=+?';
+    $randomString = '';
+
+    for ($i = 0; $i < 20; $i++) {
+        $randomString .= $characters[rand(0, strlen($characters) - 1)];
+    }
+
+    include 'sql_conn.php';
+
+    $selectencstmt = $conn->prepare("SELECT * FROM encryption ");
+    $selectencstmt->execute();
+    $selectencresult = $selectencstmt->get_result();
+
+    if ($selectencresult->num_rows === 1) {
+      $selectencdata = $selectencresult->fetch_assoc();
+
+      // check if this encryption key is being used by someone
+      if ($selectencdata['EncryptionKey'] == $randomString){
+        $count = $count + 1;
+        } else{}
+    }
+
+    if ($count > 0 || strlen($randomString) < 20 ){
+        // closing connection before calling function recursively to avoid reaching maximum sql connections 
+        $selectencstmt->close();
+        $conn->close();
+
+        generateEncryptionkey();
+    } else{
+        return $randomString;
+    }  
+ }
+
 ?>

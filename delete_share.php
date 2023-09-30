@@ -25,7 +25,8 @@ if (isset($_GET['id'])) {
         echo '</script>';
     }
 } else {
-    echo "Invalid request. No ID provided.";
+    echo include 'error/400.html';
+    exit;
 }
 
 // Close the database connection
