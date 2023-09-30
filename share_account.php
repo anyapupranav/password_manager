@@ -36,8 +36,7 @@ if (isset($_GET['id'])) {
         echo '</script>';
     }
 } else {
-    echo include 'error/400.html';
-    exit;
+    echo "Invalid request.";
 }
 
 // Close the database connection
