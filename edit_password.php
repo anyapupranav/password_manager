@@ -1,11 +1,14 @@
 <?php
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 // Error reporting and session start
 error_reporting(E_ALL ^ E_WARNING);
 error_reporting(E_ERROR | E_PARSE);
 session_start();
 
 // Redirect to login if not logged in
-if ($_SESSION['passed_user_email'] === NULL){
+if ($_SESSION['passed_user_email'] === NULL) {
     header('Location: login.php');
     exit;
 }
@@ -31,12 +34,23 @@ if (isset($_GET['id'])) {
             $oldappname = $row['AppName'];
             $oldusername = $row['UserName'];
             $FetchedPostOldPassword = $row['Password'];
-            $oldPassword = decryptString($FetchedPostOldPassword);
+            $oldCurrentEncryptionKeyId = $row['EncryptionKeyId'];
             $oldurl = $row['Url'];
             $oldnotes = $row['Notes'];
             $oldCurrentPasswordVersion = $row['CurrentPasswordVersion'];
             $_SESSION['oldCurrentPasswordVersion'] = $oldCurrentPasswordVersion;
         }
+
+        $sqlfetchenckey = "SELECT * FROM encryption WHERE UserEmailId = '$loggedinusermailid' and EncryptionKeyVersion = '$oldCurrentEncryptionKeyId'; ";
+        $resultfetchenckey = $conn->query($sqlfetchenckey);
+
+        if ($resultfetchenckey->num_rows > 0) {
+            while ($rowfetchenckey = $resultfetchenckey->fetch_assoc()) {
+                $FetchedDecryptionKey = $rowfetchenckey['EncryptionKey'];
+            }
+        }
+        $oldPassword = decryptString($FetchedPostOldPassword, $FetchedDecryptionKey);
+
     } else {
         echo "Password page not found.";
         exit;
@@ -49,11 +63,18 @@ if (isset($_GET['id'])) {
 // Check if the modification form is submitted
 if (isset($_POST['submitsave'])) {
     // Retrieve modified data from the form
-    $newgroupname = $_POST['GroupName'];
+    $prigroupname = $_POST['group'];
+    $altgroupname = $_POST['altgroup'];
+    if ($prigroupname == 'Other'){
+        $newgroupname = $altgroupname;
+    }
+    else{
+        $newgroupname = $prigroupname;
+    }
     $newappname = $_POST['AppName'];
     $newusername = $_POST['UserName'];
     $postnewPassword = $_POST['Password'];
-    $newPassword = encryptString($postnewPassword);
+    $newPassword = encryptString($postnewPassword, $FetchedDecryptionKey);
     $newurl = $_POST['Url'];
     $newnotes = $_POST['Notes'];
 
@@ -74,12 +95,75 @@ if (isset($_POST['submitsave'])) {
 
     $result1 = $conn->query($updateSql);
 
-    $insertsql = "INSERT INTO vault_history (UniqueId, Password, PasswordVersion) VALUES
-                    ('$UniqueId','$newPassword','$modifiedCurrentPasswordVersion')";
+    $insertsql = "INSERT INTO vault_history (UniqueId, Password, PasswordVersion, GroupName, AppName, UserName, Url, Notes, EncryptionKeyId) VALUES
+                    ('$UniqueId','$newPassword','$modifiedCurrentPasswordVersion', '$newgroupname', '$newappname', '$newusername', '$newurl', '$newnotes', '$oldCurrentEncryptionKeyId')";
 
     $result2 = $conn->query($insertsql);
 
     if ($result1 == TRUE && $result2 == TRUE) {
+
+        // Send notification(s) via mail if email notifications are enabled.
+        $CheckUserEmailId = $_SESSION['passed_user_email'];
+
+        $checknotificationssql = "SELECT * FROM notifications WHERE UserEmailId = '$CheckUserEmailId' ";
+        $checknotificationsresult = $conn->query($checknotificationssql);
+        if ($checknotificationsresult->num_rows > 0){
+            while ($checknotificationsrow = $checknotificationsresult->fetch_assoc()){
+                $NewAccountAddedFlag = $checknotificationsrow['NewAccountAdded'];
+            }
+        }
+
+        if ($NewAccountAddedFlag == 1){
+
+            // send mail if notifications is enabled
+            $sqlNewAccountAdded = "SELECT * FROM message_templates WHERE TemplateName = 'edit account' and DeleteFlag = 0 ";
+            $resultNewAccountAdded = $conn->query($sqlNewAccountAdded);
+        
+            if ($resultNewAccountAdded->num_rows > 0) {
+                while($rowNewAccountAdded = $resultNewAccountAdded->fetch_assoc()){
+                    $strsubject = $rowNewAccountAdded['Subject'];
+                    $strmessagebody1 = $rowNewAccountAdded['Body1'];
+                    $strmessagebody2 = $rowNewAccountAdded['Body2'];
+                }
+            }
+        
+            // send mail
+        
+            require 'phpmailer/src/Exception.php';
+            require 'phpmailer/src/PHPMailer.php';
+            require 'phpmailer/src/SMTP.php';
+        
+            $mail = new PHPMailer (true);
+        
+            $sqlmailslug = "SELECT * FROM mailslug where DeleteFlag = 0 ORDER BY Sno DESC LIMIT 1";
+            $resultmailslug = $conn->query($sqlmailslug);
+        
+            if ($resultmailslug->num_rows > 0) {
+                while ($rowmailslug = $resultmailslug->fetch_assoc()) {
+                    $FetchedMailId = $rowmailslug['EmailId'];
+                    $FetchedMailAppPassword = $rowmailslug['EmailAppPassword'];
+                }
+            }
+        
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+        
+            $mail->Username = $FetchedMailId; // Your gmail
+            $mail->Password = $FetchedMailAppPassword; // Your gmail app password
+        
+            $mail->SMTPSecure = 'ssl';
+            $mail->Port = 465;
+        
+            $mail->setFrom($FetchedMailId); // Your gmail
+        
+            $mail->addAddress($CheckUserEmailId);
+            $mail->isHTML (true);
+            $mail->Subject = $strsubject;
+            $mail->Body =  $strmessagebody1 .''. $strmessagebody2;
+            $mail->send();
+        } else{}
+
         echo '<script type="text/javascript">';
         echo 'alert("Changes have been modified successfully.");';
         echo "window.location.href = 'edit_password.php?id=$UniqueId'";
@@ -88,8 +172,6 @@ if (isset($_POST['submitsave'])) {
         echo "Error updating Changes: " . $conn->error;
     }
 }
-
-
 ?>
 
 <!DOCTYPE html>
@@ -100,36 +182,43 @@ if (isset($_POST['submitsave'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Include Bootstrap CSS -->
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
 
     <title>Edit Password</title>
+    <link rel = "icon" href = "img/titleicon.png" type = "image/x-icon">
 </head>
 
 <style>
-    .login-container {
-        max-width: 80%;
-        margin: 0 auto;
-        padding: 10px;
-        background-color: rgb(232, 242, 242);
-        border-radius: 5px;
-        box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-    }
-
     .navbar-nav {
         margin-left: auto;
     }
+            /* Styles for the overlay */
+            .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+            z-index: 1000; /* Make sure it's above other content */
+        }
+
+        /* Styles for the spinner */
+        .spinner {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1001; /* Make sure it's above the overlay */
+        }
 </style>
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="index.html">Password Manager</a>
-        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
-            aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav">
+<?php include 'themenav0.php'; ?>
 
                 <?php
                   // Check if the user is logged in
@@ -155,18 +244,34 @@ if (isset($_POST['submitsave'])) {
                     ';
                   }
                 ?>
-            </ul>
-        </div>
-    </nav>
+
+<?php include 'themenav1.php'; ?>
 
     <h2 style="text-align:center">Edit Password</h2>
-    <div class="login-container">
         <div class="container mt-5">
             <form action="edit_password.php?id=<?php echo $UniqueId; ?>" method="post">
                 <div class="form-group">
                     <label for="group">Group:</label>
-                    <input type="text" class="form-control" id="GroupName" name="GroupName"
-                        value="<?php echo $oldgroupname; ?>" >
+                    <select name="group" class="combobox form-control" id="groupSelect">
+                        <option></option>
+                        <?php
+                        // Populate the dropdown with group options from the database
+                        $sql = "SELECT DISTINCT GroupName FROM vault WHERE UserEmailId = '$loggedinusermailid' AND DeleteFlag = 0 ";
+                        $result = $conn->query($sql);
+                        while ($row = $result->fetch_assoc()) {
+                            $groupOptions = $row['GroupName'];
+                            $selected = ($oldgroupname == $groupOptions) ? 'selected' : '';
+                            echo "<option value='$groupOptions' $selected>$groupOptions</option>";
+                        }
+                        ?>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div id="otherGroupInput" style="display: none;">
+                    <div class="form-group">
+                        <label for="altgroup">Enter New Group Name:</label>
+                        <input type="text" class="form-control" id="altgroup" name="altgroup">
+                    </div>
                 </div>
                 <div class="form-group">
                     <label for="AppName">App Name:</label>
@@ -199,13 +304,12 @@ if (isset($_POST['submitsave'])) {
                 </div>
                 <br>
                 <button type="submit" class="btn btn-primary" name="submitsave">Save</button>
-                <a href='home.php' class='btn btn-light'>Cancel</a>
+                <a href='home.php' class='btn btn-light border border-dark'>Cancel</a>
             </form>
+            <br>
+            <a href='show_history.php'> Show History </a>
+            <a href="#" data-toggle="modal" data-target="#shareAccountModal" style="margin-left: 20px;"> Share Account </a>
         </div>
-        <br></br>
-        <a href='show_history.php'> Show History </a>
-        <a href="#" data-toggle="modal" data-target="#shareAccountModal"  style="margin-left: 20px;"> Share Account </a>
-    </div>
 
     <!-- Share Account Modal -->
     <div class="modal fade" id="shareAccountModal" tabindex="-1" role="dialog"
@@ -220,46 +324,46 @@ if (isset($_POST['submitsave'])) {
                 </div>
                 <div class="modal-body">
                     <table class="table table-bordered table-striped">
-                    <thead class="table-primary">
-                    <tr>
-                        <th class="bg-info">Email</th>
-                        <th class="bg-info">Action</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <?php
-                    // Fetch and display user data from the database
-                    $fetchsqlusers = "SELECT * FROM users WHERE EmailId != '$loggedinusermailid' AND ActiveFlag = '1' AND DeleteFlag = '0' ";
-                    $fetchsqlusersresult = $conn->query($fetchsqlusers);
+                        <thead class="table-primary">
+                            <tr>
+                                <th class="bg-info">Email</th>
+                                <th class="bg-info">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php
+                            // Fetch and display user data from the database
+                            $fetchsqlusers = "SELECT * FROM users WHERE EmailId != '$loggedinusermailid' AND ActiveFlag = '1' AND DeleteFlag = '0' ";
+                            $fetchsqlusersresult = $conn->query($fetchsqlusers);
 
-                    if ($fetchsqlusersresult->num_rows > 0) {
-                        while ($users = $fetchsqlusersresult->fetch_assoc()) {
-                            $fetchedusedEmailId = $users["EmailId"];
+                            if ($fetchsqlusersresult->num_rows > 0) {
+                                while ($users = $fetchsqlusersresult->fetch_assoc()) {
+                                    $fetchedusedEmailId = $users["EmailId"];
 
-                            $fetchsqlshared = "SELECT * FROM shared_accounts WHERE sharedaccountuniqueid = '$UniqueId' AND fromsharedemailid = '$loggedinusermailid' AND tosharedemailid = '$fetchedusedEmailId' and deleteflag = 0 ";
-                            $fetchsqlsharedresult = $conn->query($fetchsqlshared);
+                                    $fetchsqlshared = "SELECT * FROM shared_accounts WHERE sharedaccountuniqueid = '$UniqueId' AND fromsharedemailid = '$loggedinusermailid' AND tosharedemailid = '$fetchedusedEmailId' and deleteflag = 0 ";
+                                    $fetchsqlsharedresult = $conn->query($fetchsqlshared);
 
-                            if ($fetchsqlsharedresult->num_rows > 0) {
-                                // User is already shared with, so display a message
-                                echo '<div class="form-check">';
-                                echo "<tr>";
-                                echo "<td>" . $fetchedusedEmailId . "</td>";
-                                echo '<td><button type="button" class="btn btn-secondary" disabled>Already Shared</button></td>';
-                                echo "</tr>";
-                                echo '</div>';
-                            } else {
-                                // User is not shared with, so display a Share button
-                                echo '<div class="form-check">';
-                                echo "<tr>";
-                                echo "<td>" . $fetchedusedEmailId . "</td>";
-                                echo "<td> <span> <a href = 'share_account.php?id=$UniqueId$fetchedusedEmailId' > Share </a> </span> </td>";
-                                echo "</tr>";
-                                echo '</div>';
+                                    if ($fetchsqlsharedresult->num_rows > 0) {
+                                        // User is already shared with, so display a message
+                                        echo '<div class="form-check">';
+                                        echo "<tr>";
+                                        echo "<td>" . $fetchedusedEmailId . "</td>";
+                                        echo '<td><button type="button" class="btn btn-secondary" disabled>Already Shared</button></td>';
+                                        echo "</tr>";
+                                        echo '</div>';
+                                    } else {
+                                        // User is not shared with, so display a Share button
+                                        echo '<div class="form-check">';
+                                        echo "<tr>";
+                                        echo "<td>" . $fetchedusedEmailId . "</td>";
+                                        echo "<td> <span> <a href = 'share_account.php?id=$UniqueId$fetchedusedEmailId' class='btn btn-success'> Share </a> </span> </td>";
+                                        echo "</tr>";
+                                        echo '</div>';
+                                    }
+                                }
                             }
-                        }
-                    }
-                    ?>
-                    </tbody>
+                            ?>
+                        </tbody>
                     </table>
                 </div>
                 <div class="modal-footer">
@@ -271,18 +375,40 @@ if (isset($_POST['submitsave'])) {
 
     <hr>
 
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p> Password Manager </p>
-                </div>
-                <div class="col-md-6">
-                    <p> v1.0 </p>
-                </div>
+<footer>
+    <div class="container">
+    <hr style="background-color:gray">
+        <div class="row">
+            <div class="col-md-6">
+                <p> Password Manager </p>
+            </div>
+            <div class="col-md-6">
+            <p>
+                <?php
+                    $sqlversion = "SELECT AppVersion FROM version ORDER BY AppVersion DESC LIMIT 1";
+                    $resultversion = $conn->query($sqlversion);
+
+                    if ($resultversion->num_rows > 0) {
+                        while ($row = $resultversion->fetch_assoc()) {
+                            $AppVersion = $row['AppVersion'];
+                        }
+                    }
+                    echo $AppVersion;
+                ?>
+            </p>
             </div>
         </div>
-    </footer>
+    </div>
+</footer>
+
+    <!-- Overlay and spinner elements -->
+    <div class="overlay" id="overlay"></div>
+    <div class="spinner" id="spinner">
+        <!-- You can use an actual spinner image or icon here -->
+        <div class="spinner-border text-primary" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
 
     <!-- Include Bootstrap JS and jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
@@ -329,7 +455,36 @@ if (isset($_POST['submitsave'])) {
                     }
                 });
             });
+
+            // Show or hide the "Other Group" input field based on the selected option
+            const groupSelect = document.getElementById("groupSelect");
+            const otherGroupInput = document.getElementById("otherGroupInput");
+            groupSelect.addEventListener("change", function () {
+                if (groupSelect.value === "Other") {
+                    otherGroupInput.style.display = "block";
+                } else {
+                    otherGroupInput.style.display = "none";
+                }
+            });
+        });
+
+        // Function to show the overlay and spinner
+        function showSpinner() {
+            document.getElementById("overlay").style.display = "block";
+            document.getElementById("spinner").style.display = "block";
+        }
+
+        // Function to hide the overlay and spinner
+        function hideSpinner() {
+            document.getElementById("overlay").style.display = "none";
+            document.getElementById("spinner").style.display = "none";
+        }
+
+        // Attach an event listener to the form submission
+        document.querySelector("form").addEventListener("submit", function () {
+            showSpinner(); // Show the spinner when the form is submitted
         });
     </script>
 </body>
+
 </html>

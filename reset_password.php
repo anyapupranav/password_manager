@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newHashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
 
         // Update the password in the database and remove the reset token
-        $updateStmt = $conn->prepare("UPDATE login SET Password = ?, ResetToken = NULL, ResetTokenExpiration = NULL WHERE ResetToken = ?");
+        $updateStmt = $conn->prepare("UPDATE login SET Password = ?, LockoutCount = NULL, ResetToken = NULL, ResetTokenExpiration = NULL WHERE ResetToken = ?");
         $updateStmt->bind_param("ss", $newHashedPassword, $resetToken);
 
         if ($updateStmt->execute()) {
@@ -65,11 +65,13 @@ $conn->close();
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reset Password | Password Manager</title>
+    <link rel = "icon" href = "img/titleicon.png" type = "image/x-icon">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand" href="index.html">Password Manager</a>
+        <a class="navbar-brand" href="index.html"><i style="font-size:24px" class="fa">&#xf023;</i> Password Manager</a>
         <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
